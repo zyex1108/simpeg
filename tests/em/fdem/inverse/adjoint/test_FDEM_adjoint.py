@@ -17,7 +17,7 @@ MU = mu_0
 freq = 1e-1
 addrandoms = True
 
-SrcType = 'RawVec' #or 'MAgDipole_Bfield', 'CircularLoop', 'RawVec'
+SrcType = 'PrimSecSigma', #'RawVec' #or 'MAgDipole_Bfield', 'CircularLoop', 'RawVec'
 
 def adjointTest(fdemType, comp):
     prb = getFDEMProblem(fdemType, comp, [SrcType], freq)

@@ -571,14 +571,19 @@ class CircularLoop(BaseSrc):
 class PrimSecSigma(BaseSrc):
 
     # TODO: This will only work for E-B formulation
-    def __init__(self, rxList, freq, ePrimary, sigmaPrimary):
+    def __init__(self, rxList, freq, sigmaPrimary, ePrimary=None, primaryProblem=None, primarySurvey=None):
         self.freq = float(freq)
         self._ePrimary = ePrimary
         self.sigmaPrimary = sigmaPrimary
+        self._primaryProblem = primaryProblem
+        self._primarySurvey = primarySurvey
         self.integrate = False
         BaseSrc.__init__(self, rxList)
 
     def ePrimary(self,prob):
+        if getattr(self, '_ePrimary', None) is None:
+            if self._primaryProblem is None or self._primarySurvey is None:
+                raise Exception "if Not specifying a ePrimary, a primarySurvey and primaryProblem must be provided."
         return self._ePrimary
 
     def S_e(self,prob):
