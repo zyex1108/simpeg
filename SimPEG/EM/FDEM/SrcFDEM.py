@@ -580,10 +580,25 @@ class PrimSecSigma(BaseSrc):
         self.integrate = False
         BaseSrc.__init__(self, rxList)
 
+    def _solvePrimary(self):
+        # check if I have fields
+        # if not, solve the primary to get fields object 
+        if self._primarySurvey.ispaired:
+                if self._primarySurvey.prob is not self._primaryProblem:
+                    raise Exception "The survey object is already paired to a problem. Use survey.unpair()"
+            else:
+                self._primaryProblem.pair(self._primarySurvey)
+
+        return 
+
     def ePrimary(self,prob):
+        # check if a primary problem is defined
         if getattr(self, '_ePrimary', None) is None:
             if self._primaryProblem is None or self._primarySurvey is None:
                 raise Exception "if Not specifying a ePrimary, a primarySurvey and primaryProblem must be provided."
+            
+            self._ePrimary = self._solvePrimary[:,'e'] 
+
         return self._ePrimary
 
     def S_e(self,prob):
@@ -594,7 +609,7 @@ class PrimSecSigma(BaseSrc):
     def S_eDeriv(self, prob, v, adjoint = False):
         MeSigmaDeriv = prob.MeSigmaDeriv
         if adjoint is not True:
-            return MeSigmaDeriv(Utils.mkvc(self._ePrimary)) * v # TODO: This is really sloppy and will not work if more than one freq
+            return MeSigmaDeriv(Utils.mkvc(self._ePrimary)) * v 
         return MeSigmaDeriv(Utils.mkvc(self._ePrimary)) * v
 
 
