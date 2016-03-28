@@ -27,7 +27,7 @@ def mkvc(x, numDims=1):
 
     if isinstance(x, Zero):
         return x
-    
+
     assert isinstance(x, np.ndarray), "Vector must be a numpy array"
 
     if numDims == 1:
@@ -422,9 +422,9 @@ class Zero(object):
     def __ge__(self, v):return 0 >= v
     def __gt__(self, v):return 0 > v
 
-    @property 
+    @property
     def transpose(self): return Zero()
-    
+
     @property
     def T(self): return Zero()
 
