@@ -20,7 +20,7 @@ def getFDEMProblem(fdemType, comp, SrcList, freq, useMu=False, verbose=False):
     mesh = Mesh.TensorMesh([hx,hy,hz],['C','C','C'])
 
     if useMu is True:
-        mapping = [('sigma', Maps.ExpMap(mesh)), ('mu', Maps.IdentityMap(mesh))] 
+        mapping = [('sigma', Maps.ExpMap(mesh)), ('mu', Maps.IdentityMap(mesh))]
     else:
         mapping = Maps.ExpMap(mesh)
 
@@ -53,11 +53,15 @@ def getFDEMProblem(fdemType, comp, SrcList, freq, useMu=False, verbose=False):
                 Src.append(EM.FDEM.Src.RawVec([Rx0], freq, S_m, S_e))
         elif SrcType is 'PrimSecSigma':
             if fdemType is 'e' or fdemType is 'b':
-                S_m = np.zeros(mesh.nF)
-                S_e = np.zeros(mesh.nE)
-                S_m[Utils.closestPoints(mesh,[0.,0.,0.],'Fz') + np.sum(mesh.vnF[:1])] = 1.
-                S_e[Utils.closestPoints(mesh,[0.,0.,0.],'Ez') + np.sum(mesh.vnE[:1])] = 1.
-                Src.append(EM.FDEM.Src.RawVec([Rx0], freq, S_m, S_e))
+                # S_m = np.zeros(mesh.nF)
+                # S_e = np.zeros(mesh.nE)
+                # S_m[Utils.closestPoints(mesh,[0.,0.,0.],'Fz') + np.sum(mesh.vnF[:1])] = 1.
+                # S_e[Utils.closestPoints(mesh,[0.,0.,0.],'Ez') + np.sum(mesh.vnE[:1])] = 1.
+                primSrc = EM.FDEM.Src.MagDipole([], freq, np.r_[0.,0.,0.])
+                primarySurvey = EM.FDEM.Survey([primSrc])
+                primaryProblem = EM.FDEM.Problem_e(mesh,mapping=mapping)
+                mPrimary = np.ones(mapping.nP)*np.log(CONDUCTIVITY)
+                Src.append(EM.FDEM.Src.PrimSecSigma([Rx0], freq, mPrimary, primaryProblem, primarySurvey))
 
     if verbose:
         print '  Fetching %s problem' % (fdemType)
@@ -97,7 +101,7 @@ def crossCheckTest(SrcList, fdemType1, fdemType2, comp, addrandoms = False, useM
     prb1 = getFDEMProblem(fdemType1, comp, SrcList, freq, useMu, verbose)
     mesh = prb1.mesh
     print 'Cross Checking Forward: %s, %s formulations - %s' % (fdemType1, fdemType2, comp)
-    
+
     logsig = np.log(np.ones(mesh.nC)*CONDUCTIVITY)
     mu = np.ones(mesh.nC)*MU
 

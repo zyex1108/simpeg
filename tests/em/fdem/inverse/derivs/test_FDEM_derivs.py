@@ -8,8 +8,8 @@ from SimPEG.EM.Utils.testingUtils import getFDEMProblem
 
 testE = True
 testB = True
-testH = True
-testJ = True
+testH = False
+testJ = False
 
 verbose = False
 
@@ -20,8 +20,8 @@ MU = mu_0
 freq = 1e-1
 addrandoms = True
 
-SrcType = ['MagDipole', 'RawVec'] #or 'MAgDipole_Bfield', 'CircularLoop', 'RawVec'
-
+# SrcType = ['MagDipole', 'RawVec'] #or 'MAgDipole_Bfield', 'CircularLoop', 'RawVec'
+SrcType = ['PrimSecSigma']
 
 def derivTest(fdemType, comp):
 
