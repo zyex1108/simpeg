@@ -82,14 +82,14 @@ class OrderTest(unittest.TestCase):
     _meshType = meshTypes[0]
     meshDimension = 3
 
-    def setupMesh(self, nc):
+    def makeMesh(self, nc, meshType=_meshType, meshDimension=meshDimension):
         """
         For a given number of cells nc, generate a TensorMesh with uniform cells with edge length h=1/nc.
         """
-        if 'TensorMesh' in self._meshType:
-            if 'uniform' in self._meshType:
+        if 'TensorMesh' in meshType:
+            if 'uniform' in meshType:
                 h = [nc, nc, nc]
-            elif 'random' in self._meshType:
+            elif 'random' in meshType:
                 h1 = np.random.rand(nc)*nc*0.5 + nc*0.5
                 h2 = np.random.rand(nc)*nc*0.5 + nc*0.5
                 h3 = np.random.rand(nc)*nc*0.5 + nc*0.5
@@ -97,46 +97,46 @@ class OrderTest(unittest.TestCase):
             else:
                 raise Exception('Unexpected meshType')
 
-            self.M = TensorMesh(h[:self.meshDimension])
-            max_h = max([np.max(hi) for hi in self.M.h])
-            return max_h
+            M = TensorMesh(h[:meshDimension])
+            max_h = max([np.max(hi) for hi in M.h])
+            return M, max_h
 
-        elif 'CylMesh' in self._meshType:
-            if 'uniform' in self._meshType:
+        elif 'CylMesh' in meshType:
+            if 'uniform' in meshType:
                 h = [nc, nc, nc]
             else:
                 raise Exception('Unexpected meshType')
 
-            if self.meshDimension == 2:
-                self.M = CylMesh([h[0], 1, h[2]])
-                max_h = max([np.max(hi) for hi in [self.M.hx, self.M.hz]])
-            elif self.meshDimension == 3:
-                self.M = CylMesh(h)
-                max_h = max([np.max(hi) for hi in self.M.h])
-            return max_h
+            if meshDimension == 2:
+                M = CylMesh([h[0], 1, h[2]])
+                max_h = max([np.max(hi) for hi in [M.hx, M.hz]])
+            elif meshDimension == 3:
+                M = CylMesh(h)
+                max_h = max([np.max(hi) for hi in M.h])
+            return M, max_h
 
-        elif 'Curv' in self._meshType:
-            if 'uniform' in self._meshType:
+        elif 'Curv' in meshType:
+            if 'uniform' in meshType:
                 kwrd = 'rect'
-            elif 'rotate' in self._meshType:
+            elif 'rotate' in meshType:
                 kwrd = 'rotate'
             else:
                 raise Exception('Unexpected meshType')
-            if self.meshDimension == 1:
+            if meshDimension == 1:
                 raise Exception('Lom not supported for 1D')
-            elif self.meshDimension == 2:
+            elif meshDimension == 2:
                 X, Y = Utils.exampleLrmGrid([nc, nc], kwrd)
-                self.M = CurvilinearMesh([X, Y])
-            elif self.meshDimension == 3:
+                M = CurvilinearMesh([X, Y])
+            elif meshDimension == 3:
                 X, Y, Z = Utils.exampleLrmGrid([nc, nc, nc], kwrd)
-                self.M = CurvilinearMesh([X, Y, Z])
-            return 1./nc
+                M = CurvilinearMesh([X, Y, Z])
+            return M, 1./nc
 
-        elif 'Tree' in self._meshType:
+        elif 'Tree' in meshType:
             nc *= 2
-            if 'uniform' in self._meshType or 'notatree' in self._meshType:
+            if 'uniform' in meshType or 'notatree' in meshType:
                 h = [nc, nc, nc]
-            elif 'random' in self._meshType:
+            elif 'random' in meshType:
                 h1 = np.random.rand(nc)*nc*0.5 + nc*0.5
                 h2 = np.random.rand(nc)*nc*0.5 + nc*0.5
                 h3 = np.random.rand(nc)*nc*0.5 + nc*0.5
@@ -145,20 +145,29 @@ class OrderTest(unittest.TestCase):
                 raise Exception('Unexpected meshType')
 
             levels = int(np.log(nc)/np.log(2))
-            self.M = Tree(h[:self.meshDimension], levels=levels)
+            M = Tree(h[:meshDimension], levels=levels)
             def function(cell):
-                if 'notatree' in self._meshType:
+                if 'notatree' in meshType:
                     return levels - 1
                 r = cell.center - np.array([0.5]*len(cell.center))
                 dist = np.sqrt(r.dot(r))
                 if dist < 0.2:
                     return levels
                 return levels - 1
-            self.M.refine(function,balance=False)
-            self.M.number(balance=False)
-            # self.M.plotGrid(showIt=True)
-            max_h = max([np.max(hi) for hi in self.M.h])
-            return max_h
+            M.refine(function,balance=False)
+            M.number(balance=False)
+            # M.plotGrid(showIt=True)
+            max_h = max([np.max(hi) for hi in M.h])
+            return M, max_h
+
+
+    def setupMesh(self, nc):
+        """
+        For a given number of cells nc, generate a TensorMesh with uniform cells with edge length h=1/nc.
+        """
+        M, h = self.makeMesh(nc, meshType=self._meshType, meshDimension=self.meshDimension)
+        self.M = M
+        return h
 
     def getError(self):
         """For given h, generate A[h], f and A(f) and return norm of error."""

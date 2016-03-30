@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.sparse as sp
 from SimPEG import Utils
 
 
@@ -594,3 +595,54 @@ class BaseRectangularMesh(BaseMesh):
             return out
         else:
             return switchKernal(x)
+
+    def getInterpolationMatMesh2Mesh(self, mesh2, locType='CC'):
+        """
+        Interpolates variables from the current mesh to a new mesh (mesh2)
+
+        :param Mesh mesh2: SimPEG mesh which we interpolate values to
+        :param string locType: location of variables 'CC', 'E', 'F', 'N'
+        :rtype: scipy.sparse.csr_matrix
+        :return P: interpolation matrix
+        """
+
+        # Error Checking
+        if self._meshType == 'Cyl':
+            assert self.isSymmetric, "Currently, we do not support non-symmetric cyl meshes"
+        if mesh2._meshType == 'Cyl':
+            assert self._meshType == 'Cyl', "Interpolation from 3D mesh to Cyl mesh is not supported"
+
+        # if Cyl to cart call
+        if self._meshType == 'Cyl' and mesh2._meshType != 'Cyl':
+                return self.getInterpolationMatCartMesh(mesh2, locType)
+
+        # Scalars
+        if locType in ['CC', 'N', 'Fx', 'Fy', 'Fz', 'Ex', 'Ey', 'Ez']:
+            grid = getattr(mesh2, 'grid%s'%locType)
+            return self.getInterpolationMat(grid, locType)
+
+        # Vectors
+        else:
+            if self._meshType == 'Cyl':
+                if locType == 'F':
+                    X = self.getInterpolationMatMesh2Mesh(mesh2, locType='Fx')
+                    Z = self.getInterpolationMatMesh2Mesh(mesh2, locType='Fz')
+                    return sp.block_diag([X, Z])
+                elif locType == 'E':
+                    return self.getInterpolationMatMesh2Mesh(mesh2, locType='Ey')
+
+            if self.dim == 1:
+                return self.getInterpolationMatMesh2Mesh(mesh2, locType='%sx'%locType)
+            elif self.dim == 2:
+                X = self.getInterpolationMatMesh2Mesh(mesh2, locType='%sx'%locType)
+                Y = self.getInterpolationMatMesh2Mesh(mesh2, locType='%sy'%locType)
+                return sp.block_diag([X, Y])
+            elif self.dim == 3:
+                X = self.getInterpolationMatMesh2Mesh(mesh2, locType='%sx'%locType)
+                Y = self.getInterpolationMatMesh2Mesh(mesh2, locType='%sy'%locType)
+                Z = self.getInterpolationMatMesh2Mesh(mesh2, locType='%sz'%locType)
+                return sp.block_diag([X, Y, Z])
+
+
+
+
