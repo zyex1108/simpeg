@@ -184,3 +184,26 @@ class BaseEMProblem(Problem.BaseProblem):
             Derivative of :code:`MfRhoI` with respect to the model.
         """
         return self.mesh.getFaceInnerProductDeriv(self.curModel.rho, invMat=True)(u) * self.curModel.rhoDeriv
+
+class BaseEMSurvey(Survey.BaseSurvey):
+
+    def __init__(self, srcList, **kwargs):
+        # Sort these by frequency
+        self.srcList = srcList
+        Survey.BaseSurvey.__init__(self, **kwargs)
+
+    def eval(self, u):
+        """
+        Project fields to receiver locations
+        :param Fields u: fields object
+        :rtype: numpy.ndarray
+        :return: data
+        """
+        data = Survey.Data(self)
+        for src in self.srcList:
+            for rx in src.rxList:
+                data[src, rx] = rx.eval(src, self.mesh, u)
+        return data
+
+    def evalDeriv(self, u):
+        raise Exception('Use Receivers to project fields deriv.')
