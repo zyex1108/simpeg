@@ -53,15 +53,24 @@ def getFDEMProblem(fdemType, comp, SrcList, freq, useMu=False, verbose=False):
                 Src.append(EM.FDEM.Src.RawVec([Rx0], freq, S_m, S_e))
         elif SrcType is 'PrimSecSigma':
             if fdemType is 'e' or fdemType is 'b':
-                # S_m = np.zeros(mesh.nF)
-                # S_e = np.zeros(mesh.nE)
-                # S_m[Utils.closestPoints(mesh,[0.,0.,0.],'Fz') + np.sum(mesh.vnF[:1])] = 1.
-                # S_e[Utils.closestPoints(mesh,[0.,0.,0.],'Ez') + np.sum(mesh.vnE[:1])] = 1.
                 primSrc = EM.FDEM.Src.MagDipole([], freq, np.r_[0.,0.,0.])
                 primarySurvey = EM.FDEM.Survey([primSrc])
                 primaryProblem = EM.FDEM.Problem_e(mesh,mapping=mapping)
                 mPrimary = np.ones(mapping.nP)*np.log(CONDUCTIVITY)
-                Src.append(EM.FDEM.Src.PrimSecSigma([Rx0], freq, mPrimary, primaryProblem, primarySurvey))
+                Src.append(EM.FDEM.Src.PrimSecSigma([Rx0], freq, mPrimary, primaryProblem=primaryProblem, primarySurvey=primarySurvey))
+
+        elif SrcType is 'PrimSecCyl':
+            if fdemType is 'e' or fdemType is 'b':
+
+                hx = [(cs,ncx + 2), (cs,npad + 2,1.3)]
+                hz = [(cs,npad + 2 ,-1.3), (cs,ncz+2), (cs,npad+2,1.3)]
+                primmesh = Mesh.CylMesh([hx,1,hz], '00C')
+
+                primSrc = EM.FDEM.Src.MagDipole([], freq, np.r_[0.,0.,0.])
+                primarySurvey = EM.FDEM.Survey([primSrc])
+                primaryProblem = EM.FDEM.Problem_e(primmesh)
+                mPrimary = np.ones(primmesh.nC)*CONDUCTIVITY
+                Src.append(EM.FDEM.Src.PrimSecSigma([Rx0], freq, mPrimary, primaryProblem=primaryProblem, primarySurvey=primarySurvey))
 
     if verbose:
         print '  Fetching %s problem' % (fdemType)

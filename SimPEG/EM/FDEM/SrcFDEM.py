@@ -608,54 +608,85 @@ class CircularLoop(BaseSrc):
 class PrimSecSigma(BaseSrc):
 
     # TODO: This will only work for E-B formulation
-    def __init__(self, rxList, freq, mPrimary, primaryProblem, primarySurvey):
+    def __init__(self, rxList, freq, mPrimary, primaryProblem=None, primarySurvey=None, primaryFields=None):
         self.freq = float(freq)
         self.mPrimary = mPrimary
-        self.primaryProblem = primaryProblem
-        self.primarySurvey = primarySurvey
-        self.primaryMesh = self.primaryProblem.mesh
+
+        if primaryFields is None:
+            assert primaryProblem is not None and primarySurvey is not None, 'If no primary fields are provided, a primaryProblem and primarySurvey must be provided'
+        else:
+            self._fields = primaryFields
+
+        if primaryProblem is not None and primarySurvey is not None:
+            self.prob = primaryProblem
+            self.survey = primarySurvey
+            if self.survey.ispaired:
+                if self.survey.prob is not self.prob:
+                    raise Exception('The survey object is already paired to a problem. Use survey.unpair()')
+            else:
+                self.prob.pair(self.survey)
+
+
+        self.mesh = self.prob.mesh
         self.integrate = False
         BaseSrc.__init__(self, rxList)
 
-    @property
+    # @property
     def MeSigmaPrimary(self, prob):
         if getattr(self, '_MeSigmaPrimary', None) is None:
-            sigmaprimary = self.primaryProblem.mapping.sigmaMap * self.mPrimary
-            # if self.primaryMesh != prob.mesh:
-            #     if self.mesh._meshType == 'CYL' and prob.mesh._meshType != 'CYL':
-            #         P = self.mesh.getInterpolationMatCartMesh(prob.mesh,'CC')
-            #     sigmaprimary =
+            sigmaprimary = self.prob.mapping.sigmaMap * self.mPrimary
+            if self.mesh != prob.mesh:
+                P = self.mesh.getInterpolationMatMesh2Mesh(prob.mesh, locType='CC')
+                sigmaprimary = P * sigmaprimary
             self._MeSigmaPrimary = prob.mesh.getEdgeInnerProduct(sigmaprimary)
         return self._MeSigmaPrimary
 
+    # @property
+    def MfRhoIPrimary(self, prob):
+        if getattr(self, '_MfRhoIPrimary', None) is None:
+            rhoprimary = self.prob.mapping.rhoMap * self.mPrimary
+            if self.mesh != prob.mesh:
+                P = self.mesh.getInterpolationMatMesh2Mesh(prob.mesh, locType='CC')
+                rhoprimary = P * rhoprimary
+            self._MfRhoIPrimary = prob.mesh.getFaceInnerProduct(rhoprimary, invMat=True)
+        return self._MfRhoIPrimary
+
     @property
-    def _primaryFields(self):
-        if getattr(self, '__primaryFields', None) is None:
-            # check if I have fields
-            # if not, solve the primary to get fields object
-            if self.primarySurvey.ispaired:
-                if self.primarySurvey.prob is not self.primaryProblem:
-                    raise Exception('The survey object is already paired to a problem. Use survey.unpair()')
-            else:
-                self.primaryProblem.pair(self.primarySurvey)
-            self.__primaryFields = self.primaryProblem.fields(self.mPrimary)
-        return self.__primaryFields
+    def fields(self):
+        if getattr(self, '_fields', None) is None:
+            # check if I have fields if not, solve the primary to get fields object
+            self._fields = self.prob.fields(self.mPrimary)
+        return self._fields
 
     def ePrimary(self,prob):
         # check if a primary problem is defined
         if getattr(self, '_ePrimary', None) is None:
-            if self.primaryProblem is None or self.primarySurvey is None:
-                raise Exception('if Not specifying a ePrimary, a primarySurvey and primaryProblem must be provided.')
+            ePrimary = self.fields[:,'e']
 
-        return Utils.mkvc(self._primaryFields[:,'e'])
+            if self.mesh != prob.mesh:
+                P = self.mesh.getInterpolationMatMesh2Mesh(prob.mesh, locType='E')
+                ePrimary = Utils.mkvc(P * ePrimary)
+            self._ePrimary = Utils.mkvc(ePrimary)
 
-    def S_e(self,prob):
+        return self._ePrimary
+
+    def jPrimary(self,prob):
+        # check if a primary problem is defined
+        # if getattr(self, '_jPrimary', None) is None:
+        # if self.prob is None or self.survey is None:
+        #     raise Exception('if Not specifying a jPrimary, a primarySurvey and primaryProblem must be provided.')
+        jPrimary = self.prob.fields(self.mPrimary)[:,'j']
+        if self.mesh != prob.mesh:
+            P = self.mesh.getInterpolationMatMesh2Mesh(prob.mesh, locType='F')
+            jPrimary = P * jPrimary
+        return jPrimary
+
+    def s_e(self,prob):
         # todo --> see if the primary and secondary are on the same mesh or not
-        MeSigma = prob.MeSigma
-        print type(prob.mesh)
-        return Utils.mkvc((MeSigma - self.MeSigmaPrimary(prob)) * self.ePrimary(prob))
+        if prob._formulation == 'EB':
+            return Utils.mkvc(prob.MeSigma * self.ePrimary(prob) - self.MeSigmaPrimary(prob) * self.ePrimary(prob))
 
-    def S_eDeriv(self, prob, v, adjoint = False):
+    def s_eDeriv(self, prob, v, adjoint = False):
         MeSigmaDeriv = prob.MeSigmaDeriv
         if adjoint is not True:
             return MeSigmaDeriv(self.ePrimary(prob)) * v

@@ -21,7 +21,7 @@ freq = 1e-1
 addrandoms = True
 
 # SrcType = ['MagDipole', 'RawVec'] #or 'MAgDipole_Bfield', 'CircularLoop', 'RawVec'
-SrcType = ['PrimSecSigma']
+SrcType = ['PrimSecCyl']
 
 def derivTest(fdemType, comp):
 

@@ -4,9 +4,9 @@ from SimPEG.Utils import mkvc
 from SimPEG import Mesh, Tests
 import unittest
 
-test1D = False
+test1D = True
 test2D = True
-test3D = False
+test3D = True
 
 call1 = lambda fun, xyz: fun(xyz)
 call2 = lambda fun, xyz: fun(xyz[:, 0], xyz[:, -1])
@@ -203,7 +203,6 @@ if test2D:
                 v = call2(funX, self.M.gridN)
 
             P = self.M.getInterpolationMatMesh2Mesh(mesh2, locType=self.type)
-            print P.shape, v.shape
             num = P*v
 
             return np.linalg.norm((num - ana), np.inf)
