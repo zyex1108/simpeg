@@ -596,6 +596,7 @@ class BaseRectangularMesh(BaseMesh):
         else:
             return switchKernal(x)
 
+
     def getInterpolationMatMesh2Mesh(self, mesh2, locType='CC'):
         """
         Interpolates variables from the current mesh to a new mesh (mesh2)
@@ -606,15 +607,20 @@ class BaseRectangularMesh(BaseMesh):
         :return P: interpolation matrix
         """
 
+        # import warnings
+        # warnings.warn(
+        #      "`getInterpolationMatMesh2Mesh` will be slow. If you want to interpolate a vector from one mesh to another, use `InterpolateVecMesh2Mesh`",
+        #      RuntimeWarning)
+
         # Error Checking
-        if self._meshType == 'Cyl':
+        if self._meshType == 'CYL':
             assert self.isSymmetric, "Currently, we do not support non-symmetric cyl meshes"
-        if mesh2._meshType == 'Cyl':
-            assert self._meshType == 'Cyl', "Interpolation from 3D mesh to Cyl mesh is not supported"
+        if mesh2._meshType == 'CYL':
+            assert self._meshType == 'CYL', "Interpolation from 3D mesh to Cyl mesh is not supported"
 
         # if Cyl to cart call
-        if self._meshType == 'Cyl' and mesh2._meshType != 'Cyl':
-                return self.getInterpolationMatCartMesh(mesh2, locType)
+        if self._meshType == 'CYL' and mesh2._meshType != 'CYL':
+            return self.getInterpolationMatCartMesh(mesh2, locType)
 
         # Scalars
         if locType in ['CC', 'N', 'Fx', 'Fy', 'Fz', 'Ex', 'Ey', 'Ez']:
@@ -623,7 +629,7 @@ class BaseRectangularMesh(BaseMesh):
 
         # Vectors
         else:
-            if self._meshType == 'Cyl':
+            if self._meshType == 'CYL':
                 if locType == 'F':
                     X = self.getInterpolationMatMesh2Mesh(mesh2, locType='Fx')
                     Z = self.getInterpolationMatMesh2Mesh(mesh2, locType='Fz')
