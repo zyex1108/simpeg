@@ -103,7 +103,7 @@ class BaseSrc(Survey.BaseSrc):
         """
         return Zero()
 
-    def s_mDeriv(self, prob, v, adjoint = False):
+    def s_mDeriv(self, prob, v, adjoint=False):
         """
         Derivative of magnetic source term with respect to the inversion model
 
@@ -116,7 +116,7 @@ class BaseSrc(Survey.BaseSrc):
 
         return Zero()
 
-    def s_eDeriv(self, prob, v, adjoint = False):
+    def s_eDeriv(self, prob, v, adjoint=False):
         """
         Derivative of electric source term with respect to the inversion model
 
@@ -605,92 +605,231 @@ class CircularLoop(BaseSrc):
             return -C.T * (MMui_s * self.bPrimary(prob))
 
 
-class PrimSecSigma(BaseSrc):
+class PrimSec(BaseSrc):
+    """
+    Primary-Secondary source in the physical properties. A primary problem is
+    first solved, and the fields from this problem are used to construct a
+    source term for the secondary problem. Either a mesh and
+    fields need to be provided or a prob and a survey.
 
-    # TODO: This will only work for E-B formulation
-    def __init__(self, rxList, freq, mPrimary, primaryProblem=None, primarySurvey=None, primaryFields=None):
+    For the EB formulation, we start the derivation from Maxwell's equations:
+
+    .. math::
+        \\nabla \\times \\vec{E} + i \omega \\vec{B} = \\vec{s_m} \\\\
+        \\nabla \\times \\mu^{-1} \\vec{B} - \sigma \\vec{E} = \\vec{s_e}
+
+    we consider the physical properties, fields, and fluxes to be composed of
+    two parts, a primary and a secondary:
+
+        - :math:`\sigma   = \sigma_p + \sigma_s`
+        - :math:`\mu^{-1} = \mu^{-1}_p + \mu^{-1}_s`
+        - :math:`\\vec{E} = \\vec{E_p} + \\vec{E_s}`
+        - :math:`\\vec{B} = \\vec{B_p} + \\vec{B_s}`
+
+    and choose our primary such that
+
+    .. math::
+        \\nabla \\times \\vec{E}_p + i \omega \\vec{B}_p = \\vec{s_m} \\\\
+        \\nabla \\times \\mu^{-1}_p \\vec{B}_p - \sigma_p \\vec{E}_p = \\vec{s_e}_p
+
+    so the secondary problem is then
+
+    .. math::
+        \\nabla \\times \\vec{E}_s + i \omega \\vec{B}_s = 0 \\\\
+        \\nabla \\times \\mu^{-1} \\vec{B}_s - \sigma \\vec{E}_s = - \\nabla \\times \\mu^{-1}_s \\vec{B}_p + \sigma_s \\vec{E}_p
+
+
+    If instead, HJ formulation is considered, then we start off with
+
+    .. math::
+        \\nabla \\times \\rho \\vec{J} + i \omega \\mu \\vec{H} = \\vec{s_m} \\\\
+        \\nabla \\times \\vec{H} - \\vec{J} = \\vec{s_e}
+
+    and we define the primary secondary problem in terms of
+
+        - :math:`\\rho  = \\rho_p + \\rho_s`
+        - :math:`\mu = \mu_p + \mu_s`
+        - :math:`\\vec{J} = \\vec{J_p} + \\vec{J_s}`
+        - :math:`\\vec{H} = \\vec{H_p} + \\vec{H_s}`
+
+    with the primary being defined by
+
+    .. math::
+        \\nabla \\times \\rho_p \\vec{J}_p + i \omega \\mu_p \\vec{H}_p = \\vec{s_m} \\\\
+        \\nabla \\times \\vec{H}_p - \\vec{J}_p = \\vec{s_e}
+
+    so the secondary problem is given by
+
+    .. math::
+        \\nabla \\times \\rho \\vec{J}_s + i \omega \\mu \\vec{H} = - \\nabla \\times \\rho_s \\vec{J}_p - i \omega \\mu_s \\vec{H}_p \\
+        \\nabla \\times \\vec{H}_p - \\vec{J}_p = 0
+
+    Note: if different meshes are employed for the primary and secondary
+    problems, then we need to interpolate the fields from the primary mesh to
+    the secondary mesh. We do this by always interpolating the field and
+    computing a flux if need be in order to ensure that fluxes remain
+    numerically divergence free.
+
+    :param list rxList: Receiver list
+    :param float freq: frequency
+    :param numpy.array m: primary model
+    :param Problem prob: primary problem
+    :param Survey survey: primary survey
+    """
+
+
+    def __init__(self, rxList, freq, m, prob, survey):
         self.freq = float(freq)
-        self.mPrimary = mPrimary
+        self.m = m
+        self.prob = prob
+        self.survey = survey
+        self.fields = None
 
-        if primaryFields is None:
-            assert primaryProblem is not None and primarySurvey is not None, 'If no primary fields are provided, a primaryProblem and primarySurvey must be provided'
+        if self.survey.ispaired:
+            if self.survey.prob is not self.prob:
+                raise Exception('The survey object is already paired to a problem. Use survey.unpair()')
         else:
-            self._fields = primaryFields
-
-        if primaryProblem is not None and primarySurvey is not None:
-            self.prob = primaryProblem
-            self.survey = primarySurvey
-            if self.survey.ispaired:
-                if self.survey.prob is not self.prob:
-                    raise Exception('The survey object is already paired to a problem. Use survey.unpair()')
-            else:
-                self.prob.pair(self.survey)
-
+            self.prob.pair(self.survey)
 
         self.mesh = self.prob.mesh
-        self.integrate = False
+        self.prob.curModel = self.m
+
         BaseSrc.__init__(self, rxList)
 
-    # @property
-    def MeSigmaPrimary(self, prob):
-        if getattr(self, '_MeSigmaPrimary', None) is None:
-            sigmaprimary = self.prob.mapping.sigmaMap * self.mPrimary
+    def MeSigma(self, prob):
+        if getattr(self, '_MeSigma', None) is None:
+            sigmaprimary = self.prob.curModel.sigma
             if self.mesh != prob.mesh:
                 P = self.mesh.getInterpolationMatMesh2Mesh(prob.mesh, locType='CC')
                 sigmaprimary = P * sigmaprimary
-            self._MeSigmaPrimary = prob.mesh.getEdgeInnerProduct(sigmaprimary)
-        return self._MeSigmaPrimary
+            self._MeSigma = prob.mesh.getEdgeInnerProduct(sigmaprimary)
+        return self._MeSigma
 
-    # @property
-    def MfRhoIPrimary(self, prob):
-        if getattr(self, '_MfRhoIPrimary', None) is None:
-            rhoprimary = self.prob.mapping.rhoMap * self.mPrimary
+    def MfMui(self, prob):
+        if getattr(self, '_MfMui', None) is None:
+            muiprimary = self.prob.curModel.mui
+            if self.mesh != prob.mesh and not isinstance(muiprimary,float): # if different meshes and mu is a vector --> need to interpolate
+                P = self.mesh.getInterpolationMatMesh2Mesh(prob.mesh, locType='CC')
+                muiprimary = P * muiprimary
+            self._MfMui = prob.mesh.getFaceInnerProduct(muiprimary)
+        return self._MfMui
+
+    def MfRho(self, prob):
+        if getattr(self, '_MfRho', None) is None:
+            rhoprimary = self.prob.curModel.rho
             if self.mesh != prob.mesh:
                 P = self.mesh.getInterpolationMatMesh2Mesh(prob.mesh, locType='CC')
                 rhoprimary = P * rhoprimary
-            self._MfRhoIPrimary = prob.mesh.getFaceInnerProduct(rhoprimary, invMat=True)
-        return self._MfRhoIPrimary
+            self._MfRho = prob.mesh.getFaceInnerProduct(rhoprimary)
+        return self._MfRho
 
-    @property
-    def fields(self):
-        if getattr(self, '_fields', None) is None:
-            # check if I have fields if not, solve the primary to get fields object
-            self._fields = self.prob.fields(self.mPrimary)
-        return self._fields
+    def MeMu(self, prob):
+        if getattr(self, '_MeMu', None) is None:
+            muprimary = self.prob.curModel.mu
+            if self.mesh != prob.mesh and not isinstance(muiprimary,float): # if different meshes and mu is a vector --> need to interpolate
+                P = self.mesh.getInterpolationMatMesh2Mesh(prob.mesh, locType='CC')
+                muprimary = P * muprimary
+            self._MeMu = prob.mesh.getEdgeInnerProduct(muprimary)
+        return self._MeMu
 
+    # note if you switch from one formulation to another, but are using the same mesh, this will break
     def ePrimary(self,prob):
-        # check if a primary problem is defined
         if getattr(self, '_ePrimary', None) is None:
+            if self.fields is None:
+                self.fields = self.prob.fields(self.m)
+
             ePrimary = self.fields[:,'e']
 
             if self.mesh != prob.mesh:
-                P = self.mesh.getInterpolationMatMesh2Mesh(prob.mesh, locType='E')
+                if self.prob._formulation == 'HJ':
+                    P = self.mesh.getInterpolationMatMesh2Mesh(prob.mesh, locType=prob._GLoc('e'), locTypeFrom='CCV')
+                else:
+                    P = self.mesh.getInterpolationMatMesh2Mesh(prob.mesh, locType=prob._GLoc('e'))
                 ePrimary = Utils.mkvc(P * ePrimary)
             self._ePrimary = Utils.mkvc(ePrimary)
 
         return self._ePrimary
 
-    def jPrimary(self,prob):
-        # check if a primary problem is defined
-        # if getattr(self, '_jPrimary', None) is None:
-        # if self.prob is None or self.survey is None:
-        #     raise Exception('if Not specifying a jPrimary, a primarySurvey and primaryProblem must be provided.')
-        jPrimary = self.prob.fields(self.mPrimary)[:,'j']
-        if self.mesh != prob.mesh:
-            P = self.mesh.getInterpolationMatMesh2Mesh(prob.mesh, locType='F')
-            jPrimary = P * jPrimary
-        return jPrimary
+    # note if you switch from one formulation to another, but are using the same mesh, this will break
+    def bPrimary(self, prob):
+        if getattr(self, '_bPrimary', None) is None:
+            if self.fields is None:
+                self.fields = self.prob.fields(self.m)
+
+            if self.mesh == prob.mesh:
+                bPrimary = self.fields[:,'b']
+            else:
+                bPrimary = prob.mesh.edgeCurl * self.ePrimary(prob)
+
+            self._bPrimary = Utils.mkvc(bPrimary)
+
+        return self._bPrimary
+
+    # note if you switch from one formulation to another, but are using the same mesh, this will break
+    def hPrimary(self, prob):
+        if getattr(self, '_hPrimary', None) is None:
+            if self.fields is None:
+                self.fields = self.prob.fields(self.m)
+
+            hPrimary = self.fields[:,'h']
+
+            if self.mesh != prob.mesh:
+                if self.prob._formulation == 'EB':
+                    P = self.mesh.getInterpolationMatMesh2Mesh(prob.mesh, locType=prob._GLoc('h'), locTypeFrom='CCV')
+                else:
+                    P = self.mesh.getInterpolationMatMesh2Mesh(prob.mesh, locType=prob._GLoc('h'))
+                print P.shape, hPrimary.shape, prob._GLoc('h')
+                hPrimary = Utils.mkvc(P * hPrimary)
+            self._hPrimary = Utils.mkvc(hPrimary)
+
+        return self._hPrimary
+
+    # note if you switch from one formulation to another, but are using the same mesh, this will break
+    def jPrimary(self, prob):
+        if getattr(self, '_jPrimary', None) is None:
+            if self.fields is None:
+                self.fields = self.prob.fields(self.m)
+
+            if self.mesh == prob.mesh:
+                jPrimary = self.fields[:,'j']
+            else:
+                jPrimary = prob.mesh.edgeCurl * self.hPrimary(prob)
+
+            self._jPrimary = Utils.mkvc(jPrimary)
+
+        return self._jPrimary
 
     def s_e(self,prob):
-        # todo --> see if the primary and secondary are on the same mesh or not
         if prob._formulation == 'EB':
-            return Utils.mkvc(prob.MeSigma * self.ePrimary(prob) - self.MeSigmaPrimary(prob) * self.ePrimary(prob))
+            # - \\nabla \\times \\mu^{-1}_s \\vec{B}_p + \sigma_s \\vec{E}_p
+            s_e =  -prob.mesh.edgeCurl.T * ((prob.MfMui - self.MfMui(prob)) * self.bPrimary(prob)) +  (prob.MeSigma - self.MeSigma(prob)) * self.ePrimary(prob)
+            return Utils.mkvc(s_e)
+        else:
+            return Zero()
 
-    def s_eDeriv(self, prob, v, adjoint = False):
-        MeSigmaDeriv = prob.MeSigmaDeriv
-        if adjoint is not True:
-            return MeSigmaDeriv(self.ePrimary(prob)) * v
-        return MeSigmaDeriv(self.ePrimary(prob)) * v
+    def s_eDeriv(self, prob, v, adjoint=False):
+        if prob._formulation == 'EB':
+            if adjoint is True:
+                return prob.MeSigmaDeriv(self.ePrimary(prob)).T * v
+            return prob.MeSigmaDeriv(self.ePrimary(prob)) * v
+        else:
+            return Zero()
+
+    def s_m(self,prob):
+        if prob._formulation == 'HJ':
+            # - \\nabla \\times \\rho_s \\vec{J}_p - i \omega \\mu_s \\vec{H}_p
+            s_m = - prob.mesh.edgeCurl.T * (prob.MfRho - self.MfRho(prob)) * self.jPrimary(prob) - 1j * omega(self.freq) * ((prob.MeMu - self.MeMu(prob)) * self.hPrimary(prob))
+            return s_m
+        else:
+            return Zero()
+
+    def s_mDeriv(self, prob, v, adjoint=False):
+        if prob._formulation == 'HJ':
+            if adjoint is True:
+                return - prob.MfRhoDeriv(self.jPrimary(prob)).T * (prob.mesh.edgeCurl * v)
+            return - prob.mesh.edgeCurl.T * (prob.MfRhoDeriv(self.jPrimary(prob)) * v)
+        else:
+            return Zero()
 
 
 

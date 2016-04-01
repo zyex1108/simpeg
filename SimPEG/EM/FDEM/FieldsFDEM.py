@@ -193,16 +193,6 @@ class Fields_e(Fields):
         self._MeSigmaDeriv = self.survey.prob.MeSigmaDeriv
         self._MfMui = self.survey.prob.MfMui
 
-    def _GLoc(self, fieldType):
-        if fieldType == 'e':
-            return 'E'
-        elif fieldType == 'b':
-            return 'F'
-        elif (fieldType == 'h') or (fieldType == 'j'):
-            return 'CCV'
-        else:
-            raise Exception('Field type must be e, b, h, j')
-
 
     def _ePrimary(self, eSolution, srcList):
         """
@@ -465,17 +455,6 @@ class Fields_b(Fields):
         self._nC = self.survey.prob.mesh.nC
 
 
-
-    def _GLoc(self,fieldType):
-        if fieldType == 'e':
-            return 'E'
-        elif fieldType == 'b':
-            return 'F'
-        elif (fieldType == 'h') or (fieldType == 'j'):
-            return'CCV'
-        else:
-            raise Exception('Field type must be e, b, h, j')
-
     def _bPrimary(self, bSolution, srcList):
         """
         Primary magnetic flux density from source
@@ -728,16 +707,6 @@ class Fields_j(Fields):
         self._aveF2CCV = self.survey.prob.mesh.aveF2CCV
         self._aveE2CCV = self.survey.prob.mesh.aveE2CCV
         self._nC = self.survey.prob.mesh.nC
-
-    def _GLoc(self,fieldType):
-        if fieldType == 'h':
-            return 'E'
-        elif fieldType == 'j':
-            return 'F'
-        elif (fieldType == 'e') or (fieldType == 'b'):
-            return 'CCV'
-        else:
-            raise Exception('Field type must be e, b, h, j')
 
     def _jPrimary(self, jSolution, srcList):
         """
@@ -1023,16 +992,6 @@ class Fields_h(Fields):
         self._aveF2CCV = self.survey.prob.mesh.aveF2CCV
         self._aveE2CCV = self.survey.prob.mesh.aveE2CCV
         self._nC = self.survey.prob.mesh.nC
-
-    def _GLoc(self,fieldType):
-        if fieldType == 'h':
-            return 'E'
-        elif fieldType == 'j':
-            return 'F'
-        elif (fieldType == 'e') or (fieldType == 'b'):
-            return 'CCV'
-        else:
-            raise Exception('Field type must be e, b, h, j')
 
     def _hPrimary(self, hSolution, srcList):
         """

@@ -597,7 +597,7 @@ class BaseRectangularMesh(BaseMesh):
             return switchKernal(x)
 
 
-    def getInterpolationMatMesh2Mesh(self, mesh2, locType='CC'):
+    def getInterpolationMatMesh2Mesh(self, mesh2, locType='CC', locTypeFrom=None):
         """
         Interpolates variables from the current mesh to a new mesh (mesh2)
 
@@ -612,6 +612,9 @@ class BaseRectangularMesh(BaseMesh):
         #      "`getInterpolationMatMesh2Mesh` will be slow. If you want to interpolate a vector from one mesh to another, use `InterpolateVecMesh2Mesh`",
         #      RuntimeWarning)
 
+        if locTypeFrom is None:
+            locTypeFrom = locType # assume that we are interpolating to and from the same place
+
         # Error Checking
         if self._meshType == 'CYL':
             assert self.isSymmetric, "Currently, we do not support non-symmetric cyl meshes"
@@ -623,30 +626,30 @@ class BaseRectangularMesh(BaseMesh):
             return self.getInterpolationMatCartMesh(mesh2, locType)
 
         # Scalars
-        if locType in ['CC', 'N', 'Fx', 'Fy', 'Fz', 'Ex', 'Ey', 'Ez']:
-            grid = getattr(mesh2, 'grid%s'%locType)
+        if locType in ['CC', 'CCVx', 'CCVy', 'CCVz', 'N', 'Fx', 'Fy', 'Fz', 'Ex', 'Ey', 'Ez']:
+            grid = getattr(mesh2, 'grid%s'%locTypeFrom)
             return self.getInterpolationMat(grid, locType)
 
         # Vectors
         else:
             if self._meshType == 'CYL':
                 if locType == 'F':
-                    X = self.getInterpolationMatMesh2Mesh(mesh2, locType='Fx')
-                    Z = self.getInterpolationMatMesh2Mesh(mesh2, locType='Fz')
+                    X = self.getInterpolationMatMesh2Mesh(mesh2, locType='Fx', locTypeFrom=locTypeFrom+'x')
+                    Z = self.getInterpolationMatMesh2Mesh(mesh2, locType='Fz', locTypeFrom=locTypeFrom+'z')
                     return sp.block_diag([X, Z])
                 elif locType == 'E':
-                    return self.getInterpolationMatMesh2Mesh(mesh2, locType='Ey')
+                    return self.getInterpolationMatMesh2Mesh(mesh2, locType='Ey', locTypeFrom=locTypeFrom+'y')
 
             if self.dim == 1:
-                return self.getInterpolationMatMesh2Mesh(mesh2, locType='%sx'%locType)
+                return self.getInterpolationMatMesh2Mesh(mesh2, locType='%sx'%locType, locTypeFrom=locTypeFrom+'x')
             elif self.dim == 2:
-                X = self.getInterpolationMatMesh2Mesh(mesh2, locType='%sx'%locType)
-                Y = self.getInterpolationMatMesh2Mesh(mesh2, locType='%sy'%locType)
+                X = self.getInterpolationMatMesh2Mesh(mesh2, locType='%sx'%locType, locTypeFrom=locTypeFrom+'x')
+                Y = self.getInterpolationMatMesh2Mesh(mesh2, locType='%sy'%locType, locTypeFrom=locTypeFrom+'y')
                 return sp.block_diag([X, Y])
             elif self.dim == 3:
-                X = self.getInterpolationMatMesh2Mesh(mesh2, locType='%sx'%locType)
-                Y = self.getInterpolationMatMesh2Mesh(mesh2, locType='%sy'%locType)
-                Z = self.getInterpolationMatMesh2Mesh(mesh2, locType='%sz'%locType)
+                X = self.getInterpolationMatMesh2Mesh(mesh2, locType='%sx'%locType, locTypeFrom=locTypeFrom+'x')
+                Y = self.getInterpolationMatMesh2Mesh(mesh2, locType='%sy'%locType, locTypeFrom=locTypeFrom+'y')
+                Z = self.getInterpolationMatMesh2Mesh(mesh2, locType='%sz'%locType, locTypeFrom=locTypeFrom+'z')
                 return sp.block_diag([X, Y, Z])
 
 

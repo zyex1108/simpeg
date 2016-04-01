@@ -8,29 +8,29 @@ from SimPEG.EM.Utils import omega
 
 class BaseFDEMProblem(BaseEMProblem):
     """
-        We start by looking at Maxwell's equations in the electric
-        field \\\(\\\mathbf{e}\\\) and the magnetic flux
-        density \\\(\\\mathbf{b}\\\)
+    We start by looking at Maxwell's equations in the electric
+    field \\\(\\\mathbf{e}\\\) and the magnetic flux
+    density \\\(\\\mathbf{b}\\\)
 
-        .. math ::
+    .. math ::
 
-            \mathbf{C} \mathbf{e} + i \omega \mathbf{b} = \mathbf{s_m} \\\\
-            {\mathbf{C}^{\\top} \mathbf{M_{\mu^{-1}}^f} \mathbf{b} - \mathbf{M_{\sigma}^e} \mathbf{e} = \mathbf{s_e}}
+        \mathbf{C} \mathbf{e} + i \omega \mathbf{b} = \mathbf{s_m} \\\\
+        {\mathbf{C}^{\\top} \mathbf{M_{\mu^{-1}}^f} \mathbf{b} - \mathbf{M_{\sigma}^e} \mathbf{e} = \mathbf{s_e}}
 
-        if using the E-B formulation (:code:`Problem_e`
-        or :code:`Problem_b`). Note that in this case, :math:`\mathbf{s_e}` is an integrated quantity.
+    if using the E-B formulation (:code:`Problem_e`
+    or :code:`Problem_b`). Note that in this case, :math:`\mathbf{s_e}` is an integrated quantity.
 
-        If we write Maxwell's equations in terms of
-        \\\(\\\mathbf{h}\\\) and current density \\\(\\\mathbf{j}\\\)
+    If we write Maxwell's equations in terms of
+    \\\(\\\mathbf{h}\\\) and current density \\\(\\\mathbf{j}\\\)
 
-        .. math ::
+    .. math ::
 
-            \mathbf{C}^{\\top} \mathbf{M_{\\rho}^f} \mathbf{j} + i \omega \mathbf{M_{\mu}^e} \mathbf{h} = \mathbf{s_m} \\\\
-            \mathbf{C} \mathbf{h} - \mathbf{j} = \mathbf{s_e}
+        \mathbf{C}^{\\top} \mathbf{M_{\\rho}^f} \mathbf{j} + i \omega \mathbf{M_{\mu}^e} \mathbf{h} = \mathbf{s_m} \\\\
+        \mathbf{C} \mathbf{h} - \mathbf{j} = \mathbf{s_e}
 
-        if using the H-J formulation (:code:`Problem_j` or :code:`Problem_h`). Note that here, :math:`\mathbf{s_m}` is an integrated quantity.
+    if using the H-J formulation (:code:`Problem_j` or :code:`Problem_h`). Note that here, :math:`\mathbf{s_m}` is an integrated quantity.
 
-        The problem performs the elimination so that we are solving the system for \\\(\\\mathbf{e},\\\mathbf{b},\\\mathbf{j} \\\) or \\\(\\\mathbf{h}\\\)
+    The problem performs the elimination so that we are solving the system for \\\(\\\mathbf{e},\\\mathbf{b},\\\mathbf{j} \\\) or \\\(\\\mathbf{h}\\\)
     """
 
     surveyPair = SurveyFDEM
@@ -204,6 +204,17 @@ class Problem_e(BaseFDEMProblem):
     def __init__(self, mesh, **kwargs):
         BaseFDEMProblem.__init__(self, mesh, **kwargs)
 
+    def _GLoc(self, fieldType):
+        if fieldType == 'e':
+            return 'E'
+        elif fieldType == 'b':
+            return 'F'
+        elif (fieldType == 'h') or (fieldType == 'j'):
+            return 'CCV'
+        else:
+            raise Exception('Field type must be e, b, h, j')
+
+
     def getA(self, freq):
         """
         System matrix
@@ -313,6 +324,16 @@ class Problem_b(BaseFDEMProblem):
 
     def __init__(self, mesh, **kwargs):
         BaseFDEMProblem.__init__(self, mesh, **kwargs)
+
+    def _GLoc(self, fieldType):
+        if fieldType == 'e':
+            return 'E'
+        elif fieldType == 'b':
+            return 'F'
+        elif (fieldType == 'h') or (fieldType == 'j'):
+            return'CCV'
+        else:
+            raise Exception('Field type must be e, b, h, j')
 
     def getA(self, freq):
         """
@@ -462,6 +483,16 @@ class Problem_j(BaseFDEMProblem):
     def __init__(self, mesh, **kwargs):
         BaseFDEMProblem.__init__(self, mesh, **kwargs)
 
+    def _GLoc(self, fieldType):
+        if fieldType == 'h':
+            return 'E'
+        elif fieldType == 'j':
+            return 'F'
+        elif (fieldType == 'e') or (fieldType == 'b'):
+            return 'CCV'
+        else:
+            raise Exception('Field type must be e, b, h, j')
+
     def getA(self, freq):
         """
         System matrix
@@ -599,6 +630,17 @@ class Problem_h(BaseFDEMProblem):
 
     def __init__(self, mesh, **kwargs):
         BaseFDEMProblem.__init__(self, mesh, **kwargs)
+
+    def _GLoc(self, fieldType):
+        if fieldType == 'h':
+            return 'E'
+        elif fieldType == 'j':
+            return 'F'
+        elif (fieldType == 'e') or (fieldType == 'b'):
+            return 'CCV'
+        else:
+            raise Exception('Field type must be e, b, h, j')
+
 
     def getA(self, freq):
         """

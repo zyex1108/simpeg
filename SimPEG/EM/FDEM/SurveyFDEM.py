@@ -65,7 +65,7 @@ class Rx(SimPEG.Survey.BaseRx):
 
     def projGLoc(self, u):
         """Grid Location projection (e.g. Ex Fy ...)"""
-        return u._GLoc(self.rxType[0]) + self.knownRxTypes[self.rxType][1]
+        return u.prob._GLoc(self.rxType[0]) + self.knownRxTypes[self.rxType][1]
 
     def eval(self, src, mesh, u):
         """
@@ -77,8 +77,6 @@ class Rx(SimPEG.Survey.BaseRx):
         :rtype: numpy.ndarray
         :return: fields projected to recievers
         """
-        # projGLoc = u._GLoc(self.knownRxTypes[self.rxType][0])
-        # projGLoc += self.knownRxTypes[self.rxType][1]
 
         P = self.getP(mesh, self.projGLoc(u))
         u_part_complex = u[src, self.projField]
