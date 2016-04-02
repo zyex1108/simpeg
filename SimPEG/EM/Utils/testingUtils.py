@@ -37,20 +37,22 @@ def getFDEMProblem(fdemType, comp, SrcList, freq, useMu=False, verbose=False):
             Src.append(EM.FDEM.Src.MagDipole_Bfield([Rx0], freq=freq, loc=np.r_[0.,0.,0.]))
         elif SrcType is 'CircularLoop':
             Src.append(EM.FDEM.Src.CircularLoop([Rx0], freq=freq, loc=np.r_[0.,0.,0.]))
+
         elif SrcType is 'RawVec':
             if fdemType is 'e' or fdemType is 'b':
                 S_m = np.zeros(mesh.nF)
                 S_e = np.zeros(mesh.nE)
                 S_m[Utils.closestPoints(mesh,[0.,0.,0.],'Fz') + np.sum(mesh.vnF[:1])] = 1e-3
                 S_e[Utils.closestPoints(mesh,[0.,0.,0.],'Ez') + np.sum(mesh.vnE[:1])] = 1e-3
-                Src.append(EM.FDEM.Src.RawVec([Rx0], freq, S_m, mesh.getEdgeInnerProduct()*S_e))
+                Src.append(EM.FDEM.Src.RawVec([Rx0], freq, S_m, S_e, integrate=True))
 
             elif fdemType is 'h' or fdemType is 'j':
                 S_m = np.zeros(mesh.nE)
                 S_e = np.zeros(mesh.nF)
                 S_m[Utils.closestPoints(mesh,[0.,0.,0.],'Ez') + np.sum(mesh.vnE[:1])] = 1e-3
                 S_e[Utils.closestPoints(mesh,[0.,0.,0.],'Fz') + np.sum(mesh.vnF[:1])] = 1e-3
-                Src.append(EM.FDEM.Src.RawVec([Rx0], freq, S_m, S_e))
+                Src.append(EM.FDEM.Src.RawVec([Rx0], freq, S_m, S_e, integrate=True))
+
         elif SrcType is 'PrimSec':
                 primSrc = EM.FDEM.Src.MagDipole([], freq, np.r_[0.,0.,0.])
                 primarySurvey = EM.FDEM.Survey([primSrc])
