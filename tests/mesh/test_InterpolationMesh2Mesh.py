@@ -6,7 +6,7 @@ import unittest
 
 test1D = True
 test2D = True
-test3D = True
+test3D = False
 
 call1 = lambda fun, xyz: fun(xyz)
 call2 = lambda fun, xyz: fun(xyz[:, 0], xyz[:, -1])
