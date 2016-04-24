@@ -150,10 +150,10 @@ class RawVec_e(BaseSrc):
     :param bool integrate: Integrate the source term (multiply by Me) [False]
     """
 
-    def __init__(self, rxList, freq, s_e, ePrimary=None, jPrimary=None, hPrimary=None, bPrimary=None):
+    def __init__(self, rxList, freq, s_e, **kwargs): #ePrimary=None, jPrimary=None, hPrimary=None, bPrimary=None
         self._s_e = np.array(s_e, dtype=complex)
         self.freq = float(freq)
-        [setattr(self, '_%s'%primField, primField) for primField in [ePrimary, jPrimary, hPrimary, bPrimary] if primField is not None]
+        [setattr(self, '_%s'%primField, kwargs[primField]) for primField in ['ePrimary', 'jPrimary', 'hPrimary', 'bPrimary'] if kwargs.get(primField) is not None]
         BaseSrc.__init__(self, rxList)
 
     def s_e(self, prob):
@@ -179,10 +179,10 @@ class RawVec_m(BaseSrc):
     :param bool integrate: Integrate the source term (multiply by Me) [False]
     """
 
-    def __init__(self, rxList, freq, s_m, ePrimary=None, jPrimary=None, hPrimary=None, bPrimary=None):
+    def __init__(self, rxList, freq, s_m, **kwargs): #ePrimary=None, jPrimary=None, hPrimary=None, bPrimary=None):
         self._s_m = np.array(s_m, dtype=complex)
         self.freq = float(freq)
-        [setattr(self, '_%s'%primField, primField) for primField in [ePrimary, jPrimary, hPrimary, bPrimary] if primField is not None]
+        [setattr(self, '_%s'%primField, kwargs[primField]) for primField in ['ePrimary', 'jPrimary', 'hPrimary', 'bPrimary'] if kwargs.get(primField) is not None]
         BaseSrc.__init__(self, rxList)
 
     def s_m(self, prob):
@@ -208,11 +208,11 @@ class RawVec(BaseSrc):
     :param numpy.array s_e: electric source term
     :param bool integrate: Integrate the source term (multiply by Me) [False]
     """
-    def __init__(self, rxList, freq, s_m, s_e, ePrimary=None, jPrimary=None, hPrimary=None, bPrimary=None, **kwargs):
+    def __init__(self, rxList, freq, s_m, s_e, **kwargs): #ePrimary=None, jPrimary=None, hPrimary=None, bPrimary=None, **kwargs):
         self._s_m = np.array(s_m, dtype=complex)
         self._s_e = np.array(s_e, dtype=complex)
         self.freq = float(freq)
-        [setattr(self, '_%s'%primField, primField) for primField in [ePrimary, jPrimary, hPrimary, bPrimary] if primField is not None]
+        [setattr(self, '_%s'%primField, kwargs[primField]) for primField in ['ePrimary', 'jPrimary', 'hPrimary', 'bPrimary'] if kwargs.get(primField) is not None]
         BaseSrc.__init__(self, rxList, **kwargs)
 
     def s_m(self, prob):
