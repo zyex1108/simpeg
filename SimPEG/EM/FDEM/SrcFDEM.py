@@ -53,6 +53,9 @@ class BaseSrc(Survey.BaseSrc):
         :rtype: numpy.ndarray
         :return: primary magnetic flux density
         """
+        #TODO : allow hPrimary to be provided and get bPrimary from it
+        if getattr(self, '_bPrimary', None) is not None:
+            return self._bPrimary
         return Zero()
 
     def hPrimary(self, prob):
@@ -63,6 +66,8 @@ class BaseSrc(Survey.BaseSrc):
         :rtype: numpy.ndarray
         :return: primary magnetic field
         """
+        if getattr(self, '_hPrimary', None) is not None:
+            return self._hPrimary
         return Zero()
 
     def ePrimary(self, prob):
@@ -73,6 +78,8 @@ class BaseSrc(Survey.BaseSrc):
         :rtype: numpy.ndarray
         :return: primary electric field
         """
+        if getattr(self, '_ePrimary', None) is not None:
+            return self._ePrimary
         return Zero()
 
     def jPrimary(self, prob):
@@ -83,6 +90,8 @@ class BaseSrc(Survey.BaseSrc):
         :rtype: numpy.ndarray
         :return: primary current density
         """
+        if getattr(self, '_jPrimary', None) is not None:
+            return self._jPrimary
         return Zero()
 
     def s_m(self, prob):
@@ -141,10 +150,10 @@ class RawVec_e(BaseSrc):
     :param bool integrate: Integrate the source term (multiply by Me) [False]
     """
 
-    def __init__(self, rxList, freq, s_e):
+    def __init__(self, rxList, freq, s_e, ePrimary=None, jPrimary=None, hPrimary=None, bPrimary=None):
         self._s_e = np.array(s_e, dtype=complex)
         self.freq = float(freq)
-
+        [setattr(self, '_%s'%primField, primField) for primField in [ePrimary, jPrimary, hPrimary, bPrimary] if primField is not None]
         BaseSrc.__init__(self, rxList)
 
     def s_e(self, prob):
@@ -170,10 +179,10 @@ class RawVec_m(BaseSrc):
     :param bool integrate: Integrate the source term (multiply by Me) [False]
     """
 
-    def __init__(self, rxList, freq, s_m, integrate=True):  #ePrimary=Zero(), bPrimary=Zero(), hPrimary=Zero(), jPrimary=Zero()):
+    def __init__(self, rxList, freq, s_m, ePrimary=None, jPrimary=None, hPrimary=None, bPrimary=None):
         self._s_m = np.array(s_m, dtype=complex)
         self.freq = float(freq)
-
+        [setattr(self, '_%s'%primField, primField) for primField in [ePrimary, jPrimary, hPrimary, bPrimary] if primField is not None]
         BaseSrc.__init__(self, rxList)
 
     def s_m(self, prob):
@@ -199,10 +208,11 @@ class RawVec(BaseSrc):
     :param numpy.array s_e: electric source term
     :param bool integrate: Integrate the source term (multiply by Me) [False]
     """
-    def __init__(self, rxList, freq, s_m, s_e, **kwargs):
+    def __init__(self, rxList, freq, s_m, s_e, ePrimary=None, jPrimary=None, hPrimary=None, bPrimary=None, **kwargs):
         self._s_m = np.array(s_m, dtype=complex)
         self._s_e = np.array(s_e, dtype=complex)
         self.freq = float(freq)
+        [setattr(self, '_%s'%primField, primField) for primField in [ePrimary, jPrimary, hPrimary, bPrimary] if primField is not None]
         BaseSrc.__init__(self, rxList, **kwargs)
 
     def s_m(self, prob):
