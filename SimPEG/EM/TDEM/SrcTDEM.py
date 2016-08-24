@@ -55,7 +55,8 @@ class TriangularWaveform(BaseWaveform):
         BaseWaveform.__init__(self, offTime, hasInitialFields=True)
 
     def eval(self, time):
-        raise NotImplementedError('TriangularWaveform has not been implemented, you should write it!')
+        raise NotImplementedError('TriangularWaveform has not been '
+                                  'implemented, you should write it!')
 
 
 class BaseSrc(SimPEG.Survey.BaseSrc):
@@ -79,10 +80,6 @@ class BaseSrc(SimPEG.Survey.BaseSrc):
             self._waveform = val
         else:
             self._waveform = self.StepOffWaveform(val)
-
-    def __init__(self, rxList, waveform = StepOffWaveform(), **kwargs):
-        self.waveform = waveform
-        SimPEG.Survey.BaseSrc.__init__(self, rxList, **kwargs)
 
     def bInitial(self, prob):
         return Zero()
@@ -131,10 +128,10 @@ class MagDipole(BaseSrc):
     mu = mu_0
 
     def __init__(self, rxList, **kwargs):
-        assert (self.orientation in ['X', 'Y', 'Z'], (
-            "Orientation (right now) doesn't actually do anything! The methods"
-            " in SrcUtils should take care of this..."
-            ))
+        # assert (self.orientation in ['X', 'Y', 'Z'], (
+        #     "Orientation (right now) doesn't actually do anything! The methods"
+        #     " in SrcUtils should take care of this..."
+        #     ))
         self.integrate = False
         BaseSrc.__init__(self, rxList, **kwargs)
 
@@ -243,10 +240,10 @@ class CircularLoop(MagDipole):
     mu = mu_0
 
     def __init__(self, rxList, **kwargs):
-        assert(self.orientation in ['X', 'Y', 'Z'], (
-            "Orientation (right now) doesn't actually do anything! The methods"
-            " in SrcUtils should take care of this..."
-            ))
+        # assert(self.orientation in ['X', 'Y', 'Z'], (
+        #     "Orientation (right now) doesn't actually do anything! The methods"
+        #     " in SrcUtils should take care of this..."
+        #     ))
         self.integrate = False
         BaseSrc.__init__(self, rxList, **kwargs)
 
